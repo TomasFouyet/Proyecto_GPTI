@@ -4,12 +4,13 @@ from sqlalchemy import func
 from app.ml import RecipeModel
 from app.database import Ingredient, Recipe
 from app.dependencies import get_db
+from pydantic import BaseModel
 from typing import List
 
 router = APIRouter()
 
 # Inicializar el modelo RecipeNLG
-recipe_model = RecipeModel()
+#recipe_model = RecipeModel()
 
 @router.get("/ingredients/", response_model=List[str])
 async def get_ingredients(db: Session = Depends(get_db)):
@@ -17,26 +18,30 @@ async def get_ingredients(db: Session = Depends(get_db)):
     ingredients = db.query(Ingredient).all()
     return [ingredient.name for ingredient in ingredients]
 
-@router.post("/generate-recipe/")
-async def generate_recipe(ingredients: List[str], db: Session = Depends(get_db)):
-    if len(ingredients) > 10:
-        raise HTTPException(status_code=400, detail="You can select a maximum of 10 ingredients.")
-
+#@router.post("/generate-recipe/")
+#async def generate_recipe(ingredients: List[str], db: Session = Depends(get_db)):
+#    if len(ingredients) > 10:
+#        raise HTTPException(status_code=400, detail="You can select a maximum of 10 ingredients.")
+#
     # Unir los ingredientes en una cadena para el modelo RecipeNLG
-    ingredients_str = ", ".join(ingredients)
+#    ingredients_str = ", ".join(ingredients)
 
     # Generar receta usando RecipeNLG
-    recipe_text = recipe_model.generate_recipe(ingredients_str)
+#    recipe_text = recipe_model.generate_recipe(ingredients_str)
 
-    return {"recipe": recipe_text}
+#    return {"recipe": recipe_text}
 
+class RecipeRequest(BaseModel):
+    ingredient_list: List[str]  # Lista de ingredientes como strings
 
 @router.post("/recommendation")
-def recommend_recipe(ingredient_list: list[str], db: Session = Depends(get_db)):
+def recommend_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
+    # Extrae la lista de ingredientes del request
+    ingredient_list = request.ingredient_list
+    print(f"Ingredientes recibidos: {ingredient_list}")
     # Limitar la cantidad de ingredientes a 10
     if len(ingredient_list) > 10:
         raise HTTPException(status_code=400, detail="Puedes proporcionar un máximo de 10 ingredientes.")
-
     # Crear un diccionario para asignar puntos a cada receta
     recipe_scores = {}
 
