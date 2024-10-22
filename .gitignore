@@ -6,3 +6,4 @@ dataset
 model_recipe
 scripts
 data
+!processed_recipes.txt

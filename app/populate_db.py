@@ -74,5 +74,5 @@ def main(file_path: str):
 
 # Ejecutar la función principal
 if __name__ == "__main__":
-    file_path = "../scripts/processed_recipes.txt"  # Cambia esta ruta por la ubicación de tu archivo
+    file_path = "../processed_recipes.txt"  # Cambia esta ruta por la ubicación de tu archivo
     main(file_path)
