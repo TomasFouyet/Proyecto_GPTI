@@ -1,0 +1,8 @@
+*.csv
+*.txt
+venv
+dataset
+*.jsonl
+model_recipe
+scripts
+data
