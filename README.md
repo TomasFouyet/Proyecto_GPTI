@@ -43,6 +43,7 @@ Clona este repositorio en tu máquina local:
 ```bash
 git clone <URL-del-repositorio>
 cd <nombre-del-directorio>
+```
 
 ### 2. Configurar el entorno virtual
 Crea un entorno virtual y actívalo:
@@ -50,11 +51,13 @@ Crea un entorno virtual y actívalo:
 ```bash
 python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
+```
 
 ### 3. Instalar dependencias
 Instalar las dependencias necesarias:
 ```bash
 pip install -r requirements.txt
+```
 
 ### 4. Configurar la base de datos
 Sigue estos pasos para configurar la base de datos:
@@ -76,6 +79,7 @@ Asegurate de tener el archivo `processed_recipes.txt`
 Iniciar el servidor FastAPi ejecutadno el siguiente comando:
    ```python
    unicorn main:app --reload
+   ```
  Accede a **http://127.0.0.1:8000**
 
 ### 7. Documentacion
