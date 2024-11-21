@@ -23,8 +23,8 @@ class RecipeModel:
             pad_token_id=self.tokenizer.pad_token_id,
             no_repeat_ngram_size=3,  # Evita repeticiones
             num_beams=3,             # Aumenta la calidad de generación
-            temperature=0.7,          # Controla la aleatoriedad
-            top_p=0.9,             # Usa nucleus sampling
+            temperature=0.7,         # Controla la aleatoriedad
+            top_p=0.9,               # Usa nucleus sampling
             do_sample=True
         )
         
