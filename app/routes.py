@@ -10,7 +10,7 @@ from typing import List
 router = APIRouter()
 
 # Inicializar el modelo RecipeNLG
-#recipe_model = RecipeModel()
+recipe_model = RecipeModel()
 
 @router.get("/ingredients/", response_model=List[str])
 async def get_ingredients(db: Session = Depends(get_db)):
@@ -18,18 +18,19 @@ async def get_ingredients(db: Session = Depends(get_db)):
     ingredients = db.query(Ingredient).all()
     return [ingredient.name for ingredient in ingredients]
 
-#@router.post("/generate-recipe/")
-#async def generate_recipe(ingredients: List[str], db: Session = Depends(get_db)):
-#    if len(ingredients) > 10:
-#        raise HTTPException(status_code=400, detail="You can select a maximum of 10 ingredients.")
-#
+@router.post("/generate-recipe/")
+async def generate_recipe(ingredients: List[str], db: Session = Depends(get_db)):
+    if len(ingredients) > 10:
+        raise HTTPException(status_code=400, detail="You can select a maximum of 10 ingredients.")
+
     # Unir los ingredientes en una cadena para el modelo RecipeNLG
-#    ingredients_str = ", ".join(ingredients)
-
+    ingredients_str = ", ".join(ingredients)
+    ingredients_str = "Ingredients: " + ingredients_str
+    print(f"Ingredients received: {ingredients_str}")
     # Generar receta usando RecipeNLG
-#    recipe_text = recipe_model.generate_recipe(ingredients_str)
+    recipe_text = recipe_model.generate_recipe(ingredients_str)
 
-#    return {"recipe": recipe_text}
+    return {"recipe": recipe_text}
 
 class RecipeRequest(BaseModel):
     ingredient_list: List[str]  # Lista de ingredientes como strings
