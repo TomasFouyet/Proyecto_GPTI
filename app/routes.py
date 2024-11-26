@@ -2,10 +2,12 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.ml import RecipeModel
-from app.database import Ingredient, Recipe
+from app.database import Ingredient, Recipe, User
 from app.dependencies import get_db
 from pydantic import BaseModel
 from typing import List
+from app.schemas import RegisterRequest
+import jwt
 
 router = APIRouter()
 
@@ -81,3 +83,25 @@ def recommend_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
         "ingredient_count": recipe_scores[best_recipe_id],
         "ingredients": [ingredient.name for ingredient in best_recipe.ingredients]
     }
+
+@router.post("/register", status_code=201)
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    # Comprobar que email sea único
+    user = db.query(User).filter(User.email == request.email).first()
+    if user:
+        raise HTTPException(status_code=400, detail="El email ingresado ya se encuentra registrado")
+    new_user = User(email=request.email, password=request.password)
+    db.add(new_user)
+    db.commit()
+    return {"message": "Usuario registrado con éxito"}
+
+@router.post("/login", status_code=201)
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    # Comprobar que email sea único
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="El email ingresado no se encuentra registrado")
+    if user.password != request.password:
+        raise HTTPException(status_code=400, detail="La contraseña ingresada es inválida")
+    token = jwt.encode({"email": request.email}, "secret", algorithm="HS256")
+    return {"token": token}

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Table
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
-DATABASE_URL = "postgresql://tfouyet:tfouyet@localhost/recipe_db"
+DATABASE_URL = "postgresql://:@localhost/recipe_db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -31,6 +31,12 @@ class Ingredient(Base):
 
     # Relación inversa con Recipe
     recipes = relationship('Recipe', secondary=recipe_ingredient, back_populates='ingredients')
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, nullable=False)
+    password = Column(String, unique=False, nullable=False)
 
 # Crear las tablas en la base de datos
 Base.metadata.create_all(bind=engine)

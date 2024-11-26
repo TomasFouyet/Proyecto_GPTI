@@ -7,3 +7,5 @@ model_recipe
 scripts
 data
 !processed_recipes.txt
+*/__pycache__
+/__pycache__

@@ -33,3 +33,7 @@ class RecipeRequest(BaseModel):
 
 class IngredientsList(BaseModel):
     ingredients: List[str]
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
