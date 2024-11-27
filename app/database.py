@@ -15,6 +15,13 @@ recipe_ingredient = Table(
     Column('ingredient_id', Integer, ForeignKey('ingredients.id'), primary_key=True)
 )
 
+user_recipe = Table(
+    'user_recipe',
+    Base.metadata,
+    Column('recipe_id', Integer, ForeignKey('recipes.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+)
+
 class Recipe(Base):
     __tablename__ = 'recipes'
     id = Column(Integer, primary_key=True, index=True)
@@ -23,6 +30,9 @@ class Recipe(Base):
 
     # Relación muchos a muchos con Ingredient
     ingredients = relationship('Ingredient', secondary=recipe_ingredient, back_populates='recipes')
+
+    # Relación inversa con User
+    users = relationship('User', secondary=user_recipe, back_populates='recipes')
 
 class Ingredient(Base):
     __tablename__ = 'ingredients'
@@ -37,6 +47,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, nullable=False)
     password = Column(String, unique=False, nullable=False)
+    
+    # Relación muchos a muchos con Recipe
+    recipes = relationship('Recipe', secondary=user_recipe, back_populates='users')
 
 # Crear las tablas en la base de datos
 Base.metadata.create_all(bind=engine)

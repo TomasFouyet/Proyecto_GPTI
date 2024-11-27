@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, exists
 from app.ml import RecipeModel
-from app.database import Ingredient, Recipe, User
+from app.database import Ingredient, Recipe, User, user_recipe
 from app.dependencies import get_db
 from pydantic import BaseModel
 from typing import List
@@ -36,6 +36,7 @@ async def generate_recipe(ingredients: List[str], db: Session = Depends(get_db))
 
 class RecipeRequest(BaseModel):
     ingredient_list: List[str]  # Lista de ingredientes como strings
+    token: str
 
 @router.post("/recommendation")
 def recommend_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
@@ -76,6 +77,19 @@ def recommend_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
     # Obtener la receta con más puntos desde la base de datos
     best_recipe = db.query(Recipe).filter(Recipe.id == best_recipe_id).first()
 
+    user_id = jwt.decode(request.token, "secret", algorithms="HS256")['id']
+
+    existing_relation = db.query(exists().where(
+        user_recipe.c.recipe_id == best_recipe.id,
+        user_recipe.c.user_id == user_id
+    )).scalar()
+
+    if not existing_relation:
+        stmt = user_recipe.insert().values(recipe_id=best_recipe.id, user_id=user_id)
+        db.execute(stmt)
+        db.commit()
+
+
     return {
         "recipe_id": best_recipe.id,
         "title": best_recipe.title,
@@ -103,5 +117,21 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="El email ingresado no se encuentra registrado")
     if user.password != request.password:
         raise HTTPException(status_code=400, detail="La contraseña ingresada es inválida")
-    token = jwt.encode({"email": request.email}, "secret", algorithm="HS256")
+    token = jwt.encode({"id": user.id}, "secret", algorithm="HS256")
     return {"token": token}
+
+@router.get("/historial", status_code=200)
+def historial(request: Request, db: Session = Depends(get_db)):
+    authorization = request.headers.get('Authorization')
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token no encontrado")
+    token = authorization.replace("Bearer ", "")
+    user_id = jwt.decode(token, "secret", algorithms="HS256")['id']
+    user = db.query(User).filter(User.id == user_id).first()
+    recipies = [{
+        "recipe_id": recipe.id,
+        "title": recipe.title,
+        "instructions": recipe.instructions,
+        "ingredients": [ingredient.name for ingredient in recipe.ingredients]
+    } for recipe in user.recipes]
+    return {"data": recipies}

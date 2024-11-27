@@ -37,3 +37,6 @@ class IngredientsList(BaseModel):
 class RegisterRequest(BaseModel):
     email: str
     password: str
+
+class HistorialRequest(BaseModel):
+    token: str
