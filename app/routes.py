@@ -25,12 +25,8 @@ async def generate_recipe(ingredients: List[str], db: Session = Depends(get_db))
     if len(ingredients) > 10:
         raise HTTPException(status_code=400, detail="You can select a maximum of 10 ingredients.")
 
-    # Unir los ingredientes en una cadena para el modelo RecipeNLG
-    ingredients_str = ", ".join(ingredients)
-    ingredients_str = "Ingredients: " + ingredients_str
-    print(f"Ingredients received: {ingredients_str}")
     # Generar receta usando RecipeNLG
-    recipe_text = recipe_model.generate_recipe(ingredients_str)
+    recipe_text = recipe_model.generate_recipe(ingredients)
 
     return {"recipe": recipe_text}
 
