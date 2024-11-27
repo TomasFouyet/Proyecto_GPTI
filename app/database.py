@@ -22,6 +22,13 @@ user_recipe = Table(
     Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
 )
 
+favorites = Table(
+    'favorites',
+    Base.metadata,
+    Column('recipe_id', Integer, ForeignKey('recipes.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+)
+
 class Recipe(Base):
     __tablename__ = 'recipes'
     id = Column(Integer, primary_key=True, index=True)
@@ -33,6 +40,9 @@ class Recipe(Base):
 
     # Relación inversa con User
     users = relationship('User', secondary=user_recipe, back_populates='recipes')
+    
+    # Relación inversa con User
+    users_favorites = relationship('User', secondary=favorites, back_populates='favorites')
 
 class Ingredient(Base):
     __tablename__ = 'ingredients'
@@ -50,6 +60,9 @@ class User(Base):
     
     # Relación muchos a muchos con Recipe
     recipes = relationship('Recipe', secondary=user_recipe, back_populates='users')
+
+    # Relación muchos a muchos con Recipe
+    favorites = relationship('Recipe', secondary=favorites, back_populates='users_favorites')
 
 # Crear las tablas en la base de datos
 Base.metadata.create_all(bind=engine)

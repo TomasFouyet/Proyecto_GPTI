@@ -6,7 +6,7 @@ from app.database import Ingredient, Recipe, User, user_recipe
 from app.dependencies import get_db
 from pydantic import BaseModel
 from typing import List
-from app.schemas import RegisterRequest
+from app.schemas import RegisterRequest, FavoriteRequest, GenerateRequest
 import jwt
 
 router = APIRouter()
@@ -21,14 +21,39 @@ async def get_ingredients(db: Session = Depends(get_db)):
     return [ingredient.name for ingredient in ingredients]
 
 @router.post("/generate-recipe/")
-async def generate_recipe(ingredients: List[str], db: Session = Depends(get_db)):
-    if len(ingredients) > 10:
+async def generate_recipe(request: GenerateRequest, db: Session = Depends(get_db)):
+    if len(request.ingredients) > 10:
         raise HTTPException(status_code=400, detail="You can select a maximum of 10 ingredients.")
 
     # Generar receta usando RecipeNLG
-    recipe_text = recipe_model.generate_recipe(ingredients)
+    recipe_text = recipe_model.generate_recipe(request.ingredients)
 
-    return {"recipe": recipe_text}
+    title = "AI Generated Recipe"
+    instructions = recipe_text
+    new_recipe = Recipe(title=title, instructions=instructions)
+    db.add(new_recipe)
+    db.commit()
+
+    user_id = jwt.decode(request.token, "secret", algorithms="HS256")['id']
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado.")
+
+    existing_relation = db.query(exists().where(
+        user_recipe.c.recipe_id == new_recipe.id,
+        user_recipe.c.user_id == user_id
+    )).scalar()
+
+    if not existing_relation:
+        stmt = user_recipe.insert().values(recipe_id=new_recipe.id, user_id=user_id)
+        db.execute(stmt)
+        db.commit()
+
+    return {
+        "recipe_id": new_recipe.id,
+        "title": new_recipe.title,
+        "instructions": new_recipe.instructions,
+    }
 
 class RecipeRequest(BaseModel):
     ingredient_list: List[str]  # Lista de ingredientes como strings
@@ -74,6 +99,9 @@ def recommend_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
     best_recipe = db.query(Recipe).filter(Recipe.id == best_recipe_id).first()
 
     user_id = jwt.decode(request.token, "secret", algorithms="HS256")['id']
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado.")
 
     existing_relation = db.query(exists().where(
         user_recipe.c.recipe_id == best_recipe.id,
@@ -124,10 +152,52 @@ def historial(request: Request, db: Session = Depends(get_db)):
     token = authorization.replace("Bearer ", "")
     user_id = jwt.decode(token, "secret", algorithms="HS256")['id']
     user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado.")
     recipies = [{
         "recipe_id": recipe.id,
         "title": recipe.title,
         "instructions": recipe.instructions,
         "ingredients": [ingredient.name for ingredient in recipe.ingredients]
     } for recipe in user.recipes]
+    return {"data": recipies}
+
+@router.post("/favorites", status_code=200)
+def historial(request: FavoriteRequest, db: Session = Depends(get_db)):
+    token = request.token
+    user_id = jwt.decode(token, "secret", algorithms="HS256")['id']
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado.")
+    existing_relation = db.query(exists().where(
+        favorites.c.recipe_id == request.recipe_id,
+        favorites.c.user_id == user_id
+    )).scalar()
+
+    if not existing_relation:
+        stmt = favorites.insert().values(recipe_id=request.recipe_id, user_id=user_id)
+        db.execute(stmt)
+        db.commit()
+    else:
+        raise HTTPException(status_code=400, detail="La receta ya está en favoritos.")
+
+    
+    return {"message": "Receta agregada a favoritos."}
+
+@router.get("/favorites", status_code=200)
+def historial(request: Request, db: Session = Depends(get_db)):
+    authorization = request.headers.get('Authorization')
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token no encontrado")
+    token = authorization.replace("Bearer ", "")
+    user_id = jwt.decode(token, "secret", algorithms="HS256")['id']
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado.")
+    recipies = [{
+        "recipe_id": recipe.id,
+        "title": recipe.title,
+        "instructions": recipe.instructions,
+        "ingredients": [ingredient.name for ingredient in recipe.ingredients]
+    } for recipe in user.favorites]
     return {"data": recipies}

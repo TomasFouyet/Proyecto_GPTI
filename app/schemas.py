@@ -40,3 +40,11 @@ class RegisterRequest(BaseModel):
 
 class HistorialRequest(BaseModel):
     token: str
+
+class FavoriteRequest(BaseModel):
+    token: str
+    recipe_id: int
+
+class GenerateRequest(BaseModel):
+    token: str
+    ingredients: List[str]
