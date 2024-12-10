@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Table
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
-DATABASE_URL = "postgresql://:@localhost/recipe_db"
+DATABASE_URL = "postgresql://cgr:bfvlux43@localhost/recipe_db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

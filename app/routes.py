@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func, exists
+from sqlalchemy import func, exists, delete
 from app.ml import RecipeModel
-from app.database import Ingredient, Recipe, User, user_recipe
+from app.database import Ingredient, Recipe, User, user_recipe, favorites
 from app.dependencies import get_db
 from pydantic import BaseModel
 from typing import List
@@ -53,6 +53,7 @@ async def generate_recipe(request: GenerateRequest, db: Session = Depends(get_db
         "recipe_id": new_recipe.id,
         "title": new_recipe.title,
         "instructions": new_recipe.instructions,
+        "favorite": False,
     }
 
 class RecipeRequest(BaseModel):
@@ -119,7 +120,8 @@ def recommend_recipe(request: RecipeRequest, db: Session = Depends(get_db)):
         "title": best_recipe.title,
         "instructions": best_recipe.instructions,
         "ingredient_count": recipe_scores[best_recipe_id],
-        "ingredients": [ingredient.name for ingredient in best_recipe.ingredients]
+        "ingredients": [ingredient.name for ingredient in best_recipe.ingredients],
+        "favorite": False,
     }
 
 @router.post("/register", status_code=201)
@@ -158,12 +160,13 @@ def historial(request: Request, db: Session = Depends(get_db)):
         "recipe_id": recipe.id,
         "title": recipe.title,
         "instructions": recipe.instructions,
-        "ingredients": [ingredient.name for ingredient in recipe.ingredients]
+        "ingredients": [ingredient.name for ingredient in recipe.ingredients],
+        "favorite": True if recipe.id in [user_recipe.id for user_recipe in user.favorites] else False,
     } for recipe in user.recipes]
     return {"data": recipies}
 
 @router.post("/favorites", status_code=200)
-def historial(request: FavoriteRequest, db: Session = Depends(get_db)):
+def agregar_favorito(request: FavoriteRequest, db: Session = Depends(get_db)):
     token = request.token
     user_id = jwt.decode(token, "secret", algorithms="HS256")['id']
     user = db.query(User).filter(User.id == user_id).first()
@@ -184,6 +187,36 @@ def historial(request: FavoriteRequest, db: Session = Depends(get_db)):
     
     return {"message": "Receta agregada a favoritos."}
 
+@router.post("/favorites/delete", status_code=200)
+def eliminar_favorito(request: FavoriteRequest, db: Session = Depends(get_db)):
+    token = request.token
+    user_id = jwt.decode(token, "secret", algorithms="HS256")['id']
+    recipe_id = request.recipe_id
+    
+    # Verificar si el usuario existe
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado.")
+    
+    # Verificar si existe la relación
+    existing_relation = db.query(favorites).filter(
+        favorites.c.recipe_id == recipe_id,
+        favorites.c.user_id == user_id
+    ).first()
+    
+    if not existing_relation:
+        raise HTTPException(status_code=404, detail="La receta no está en favoritos.")
+    
+    # Eliminar la relación
+    stmt = delete(favorites).where(
+        favorites.c.recipe_id == recipe_id,
+        favorites.c.user_id == user_id
+    )
+    db.execute(stmt)
+    db.commit()
+    
+    return {"message": "Receta eliminada de favoritos."}
+
 @router.get("/favorites", status_code=200)
 def historial(request: Request, db: Session = Depends(get_db)):
     authorization = request.headers.get('Authorization')
@@ -198,6 +231,7 @@ def historial(request: Request, db: Session = Depends(get_db)):
         "recipe_id": recipe.id,
         "title": recipe.title,
         "instructions": recipe.instructions,
-        "ingredients": [ingredient.name for ingredient in recipe.ingredients]
+        "ingredients": [ingredient.name for ingredient in recipe.ingredients],
+        "favorite": True,
     } for recipe in user.favorites]
     return {"data": recipies}
